@@ -1,5 +1,7 @@
 package nsqjava.core;
 
+import nsqjava.core.enums.FrameType;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -15,6 +17,7 @@ public class NSQFrameDecoder extends FrameDecoder {
         }
         int size = buff.getInt(0);
         int frameType = buff.getInt(3);
+        FrameType t = FrameType.fromCode(frameType);
         if (8 + size > readableBytes) {
             // not enough data
             return null;
@@ -27,7 +30,8 @@ public class NSQFrameDecoder extends FrameDecoder {
         byte[] body = new byte[size - NSQMessage.MIN_SIZE_BYTES];
         buff.readBytes(body);
         NSQMessage msg = new NSQMessage(ts, attempts, msgId, body);
-        return msg;
+        NSQFrame frame = new NSQFrame(t, size, msg);
+        return frame;
         
     }
 

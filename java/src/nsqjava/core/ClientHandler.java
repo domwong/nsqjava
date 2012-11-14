@@ -22,11 +22,8 @@ public class ClientHandler extends SimpleChannelHandler {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
-        NSQMessage m = (NSQMessage) e.getMessage();
-        // do some check to see if enough bytes have been read
-        //        long currentTimeMillis = buf.readInt() * 1000L;
-        //        System.out.println(new Date(currentTimeMillis));
-        //        e.getChannel().close();
+        NSQFrame m = (NSQFrame) e.getMessage();
+        
     }
 
     @Override
