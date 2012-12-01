@@ -1,5 +1,7 @@
 package nsqjava.core;
 
+import java.nio.ByteBuffer;
+
 public class NSQMessage {
 
     // message format defined as 8 byte TS, 2 byte attempts, 16 byte msg ID, N byte body
@@ -36,4 +38,18 @@ public class NSQMessage {
         return body;
     }
     
+    public byte[] getBytes() {
+        int size = getSize();
+        ByteBuffer bb = ByteBuffer.allocate(size);
+        bb.putLong(timestamp);
+        bb.putChar((char)attempts);
+        bb.put(messageId);
+        bb.put(body);
+        return bb.array();
+    }
+    
+    
+    public int getSize() {
+        return MIN_SIZE_BYTES + body.length;
+    }
 }

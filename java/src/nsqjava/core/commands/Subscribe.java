@@ -17,8 +17,11 @@ public class Subscribe implements NSQCommand {
 
     @Override
     public String getCommandString() {
-        return String.format("%s %s %s %s %s", CommandType.SUBSCRIBE.getCode(), topic, channel, shortId, longId);
+        return String.format("%s %s %s %s %s\n", CommandType.SUBSCRIBE.getCode(), topic, channel, shortId, longId);
     }
-    
+    @Override
+    public byte[] getCommandBytes() {
+        return getCommandString().getBytes();
+    }
     
 }

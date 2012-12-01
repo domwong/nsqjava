@@ -12,7 +12,13 @@ public class Ready implements NSQCommand {
 
     @Override
     public String getCommandString() {
-        return String.format("%s %s", CommandType.READY, count);
+        return String.format("%s %s\n", CommandType.READY.getCode(), count);
     }
 
+    @Override
+    public byte[] getCommandBytes() {
+        return getCommandString().getBytes();
+    }
+    
+    
 }
