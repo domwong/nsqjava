@@ -1,17 +1,20 @@
 package nsqjava.core.commands;
 
 
-public class Finish implements NSQCommand {
+public class Requeue implements NSQCommand {
 
     private final byte[] msgId;
+    private final int timeout;
+    
 
-    public Finish(byte[] msgId) {
+    public Requeue(byte[] msgId, int timeout) {
         this.msgId = msgId;
+        this.timeout = timeout;
     }
 
     @Override
     public String getCommandString() {
-        return "FIN " + new String(msgId) + "\n";
+        return "REQ " + new String(msgId) + " "+ timeout+ "\n";
     }
 
     @Override

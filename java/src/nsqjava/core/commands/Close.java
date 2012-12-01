@@ -1,17 +1,10 @@
 package nsqjava.core.commands;
 
-
-public class Finish implements NSQCommand {
-
-    private final byte[] msgId;
-
-    public Finish(byte[] msgId) {
-        this.msgId = msgId;
-    }
+public class Close implements NSQCommand {
 
     @Override
     public String getCommandString() {
-        return "FIN " + new String(msgId) + "\n";
+        return "CLS\n";
     }
 
     @Override
