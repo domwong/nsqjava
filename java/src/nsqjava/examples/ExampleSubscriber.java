@@ -37,17 +37,19 @@ public class ExampleSubscriber {
         // connect to nsqd TODO add step for lookup via nsqlookupd
         ChannelFactory factory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
-        ClientBootstrap bootstrap = new ClientBootstrap(factory);
+        final ClientBootstrap bootstrap = new ClientBootstrap(factory);
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             public ChannelPipeline getPipeline() {
-                return Channels.pipeline(new NSQFrameDecoder(), new ExampleHandler());
+                return Channels.pipeline(new NSQFrameDecoder(), new ExampleHandler(bootstrap));
             }
 
         });
-
+        
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+        InetSocketAddress addr = new InetSocketAddress(host, port);
+        bootstrap.setOption("remoteAddress", addr);
+        ChannelFuture future = bootstrap.connect(addr);
         future.sync();
         Thread.currentThread().sleep(5000);
         log.debug("Now to do some work");
@@ -63,14 +65,16 @@ public class ExampleSubscriber {
         if (!future.isSuccess()) {
             future.getCause().printStackTrace();
         }
-        //        log.debug("Closing");
-        //        chan.write(new Close());
         future.getChannel().getCloseFuture().awaitUninterruptibly();
-        factory.releaseExternalResources();
+        
     }
 
     public static class ExampleHandler extends NSQChannelHandler {
 
+        public ExampleHandler(ClientBootstrap bs) {
+            super(bs);
+        }
+        
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
             log.debug("Received message " + e.getMessage());

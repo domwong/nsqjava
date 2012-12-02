@@ -30,10 +30,10 @@ public class ExamplePublisher {
         // connect to nsqd TODO add step for lookup via nsqlookupd
         ChannelFactory factory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
-        ClientBootstrap bootstrap = new ClientBootstrap(factory);
+        final ClientBootstrap bootstrap = new ClientBootstrap(factory);
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             public ChannelPipeline getPipeline() {
-                return Channels.pipeline(new NSQFrameDecoder(), new NSQChannelHandler());
+                return Channels.pipeline(new NSQFrameDecoder(), new NSQChannelHandler(bootstrap));
             }
         });
 
@@ -45,7 +45,7 @@ public class ExamplePublisher {
         log.debug("Now to do some work");
         Channel chan = future.getChannel();
 
-        for (int i = 1; i < 1000; ++i) {
+        for (int i = 1; i < 10000; ++i) {
             Publish pub = new Publish("newtopic", ("BRAVE NEW WOWLD this is going to be bigger than what you expect " + Integer.toString(i)).getBytes());
             log.debug("publishing to" + pub.getCommandString());
             chan.write(pub);

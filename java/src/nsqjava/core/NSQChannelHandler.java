@@ -1,10 +1,14 @@
 package nsqjava.core;
 
+import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
+
 import nsqjava.core.commands.Finish;
 import nsqjava.core.commands.Magic;
 import nsqjava.core.commands.NSQCommand;
 import nsqjava.core.enums.ResponseType;
 
+import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFuture;
@@ -15,25 +19,41 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timeout;
+import org.jboss.netty.util.Timer;
+import org.jboss.netty.util.TimerTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class NSQChannelHandler extends SimpleChannelHandler {
 
     private static final Logger log = LoggerFactory.getLogger(NSQChannelHandler.class);
+    private int reconnectDelay = 5;
+    private Timer timer;
 
     private boolean authenticated = false;
+
+    private ClientBootstrap bootstrap;
+
+    public NSQChannelHandler(ClientBootstrap bootstrap) {
+        this.bootstrap = bootstrap;
+        timer = new HashedWheelTimer();
+    }
+
+    InetSocketAddress getRemoteAddress() {
+        return (InetSocketAddress) bootstrap.getOption("remoteAddress");
+    }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         log.debug("Received message " + e.getMessage());
         Object o = e.getMessage();
         if (o instanceof ResponseType) {
-
             if (o == ResponseType.HEARTBEAT) {
-                log.debug("received heartbeat");
+                log.trace("Received heartbeat");
             } else {
-                log.debug("received " + o);
+                log.trace("Received " + o);
             }
         } else if (o instanceof NSQFrame) {
             log.debug("received nsqframe");
@@ -47,15 +67,27 @@ public class NSQChannelHandler extends SimpleChannelHandler {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-        e.getCause().printStackTrace();
-        e.getChannel().close();
+        log.error("Exception caught in NSQ channel",e.getCause());
+        
+        ctx.getChannel().close();
     }
 
     @Override
     public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        // TODO Auto-generated method stub
         super.channelDisconnected(ctx, e);
         this.authenticated = false;
+        log.debug("Disconnected from NSQ " + getRemoteAddress());
+    }
+
+    @Override
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        log.debug("Sleeping for: " + reconnectDelay + "s");
+        timer.newTimeout(new TimerTask() {
+            public void run(Timeout timeout) throws Exception {
+                log.debug("Reconnecting to: " + getRemoteAddress());
+                bootstrap.connect();
+            }
+        }, reconnectDelay, TimeUnit.SECONDS);
     }
 
     @Override
@@ -76,7 +108,7 @@ public class NSQChannelHandler extends SimpleChannelHandler {
             Channels.write(ctx, e.getFuture(), buf);
 
         } else if (o instanceof NSQCommand) {
-            log.debug("NSQCommand writing "+o);
+            log.debug("NSQCommand writing " + o);
             if (!authenticated && !(o instanceof Magic)) {
                 // TODO - should probably queue this stuff up rather than throw exception.
                 e.getFuture().setFailure(new Exception("Not authenticated yet"));
