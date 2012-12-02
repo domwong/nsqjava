@@ -15,7 +15,7 @@ public class Publish implements NSQCommand {
 
     @Override
     public String getCommandString() {
-        return String.format("%s %s\n%s %s", CommandType.PUBLISH.getCode(), topic, data.length, data);
+        return String.format("%s %s\n%s%s", CommandType.PUBLISH.getCode(), topic, data.length, data);
     }
 
     @Override

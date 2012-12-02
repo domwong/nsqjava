@@ -7,6 +7,7 @@ import nsqjava.core.enums.FrameType;
 import nsqjava.core.enums.ResponseType;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
@@ -14,45 +15,47 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class NSQFrameDecoder extends FrameDecoder {
-
+    
     private static final Logger log = LoggerFactory.getLogger(NSQFrameDecoder.class);
-
+    
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel chan, ChannelBuffer buff) throws Exception {
 
-        ByteBuffer bb = ByteBuffer.allocate(buff.readableBytes());
-        buff.getBytes(0, bb);
-        log.debug("DECODE " + buff.readableBytes() + " " + new String(bb.array()));
         int readableBytes = buff.readableBytes();
-        if (readableBytes < 8) {
+        if (readableBytes < 4) {
             log.debug("not enough readable bytes");
-
             return null;
         }
-        int size = buff.getInt(0);
-        int frameType = buff.getInt(4);
+        buff.markReaderIndex();
+        int size = buff.readInt();
+        if (readableBytes <  size) {
+            log.debug("still not enough readable bytes");
+            buff.resetReaderIndex();
+            return null;
+        }
+        ChannelBuffer cbuf = ChannelBuffers.buffer(size);
+        buff.readBytes(cbuf);
+        int frameType = cbuf.readInt();
         FrameType t = FrameType.fromCode(frameType);
-        log.debug("Frame type is " + t + " readablebytes " + readableBytes + " size " + size);
-        if (readableBytes < 4 + size) {
-            return null;
+        log.debug("Frame type is "+ frameType +" " + t+ " size " + size + " readablebytes " + readableBytes );
+        if (t ==null) {
+            // uh oh
+            throw new Exception("Unknown frame type "+frameType);
         }
-
         switch (t) {
         case ERROR:
-            return handleError(buff, size);
+            return handleError(cbuf, size);
         case RESPONSE:
-            return handleResponse(chan, buff, size);
+            return handleResponse(chan,cbuf, size);
         case MESSAGE:
-            return handleMessage(chan, buff, size);
+            return handleMessage(chan, cbuf, size);
         }
         return null;
 
     }
     
     private NSQFrame handleMessage(Channel chan, ChannelBuffer buff , int size) {
-        buff.skipBytes(8);
         long ts = buff.readLong();
-        
         int attempts = buff.readUnsignedShort();
         byte[] msgId = new byte[16];
         buff.readBytes(msgId);
@@ -60,7 +63,7 @@ public class NSQFrameDecoder extends FrameDecoder {
         buff.readBytes(body);
         NSQMessage msg = new NSQMessage(ts, attempts, msgId, body);
         NSQFrame frame = new NSQFrame(FrameType.MESSAGE, size, msg);
-        log.debug("decoded message "+ new String( frame.getMsg().getBody()));
+        log.debug("decoded message with id "+ new String(msgId));
         return frame;
     }
     
@@ -83,10 +86,8 @@ public class NSQFrameDecoder extends FrameDecoder {
 
     private String readString(ChannelBuffer buff, int size) {
         ByteBuffer bb = ByteBuffer.allocate(size - 4);
-        buff.getBytes(8, bb);
+        buff.readBytes(bb);
         String resp = new String(bb.array());
-        log.debug("Read resp " + resp+"!");
-        buff.readBytes(4 + size);
         return resp;
     }
 
