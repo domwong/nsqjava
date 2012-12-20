@@ -67,8 +67,8 @@ public class NSQChannelHandler extends SimpleChannelHandler {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-        log.error("Exception caught in NSQ channel",e.getCause());
-        
+        log.error("Exception caught in NSQ channel", e.getCause());
+
         ctx.getChannel().close();
     }
 
@@ -95,7 +95,7 @@ public class NSQChannelHandler extends SimpleChannelHandler {
         Object o = e.getMessage();
         if (o instanceof NSQFrame) {
             log.debug("NSQFrame writing");
-            if (!authenticated) {
+            if (!isAuthenticated()) {
                 // TODO - should probably queue this stuff up rather than throw exception.
                 e.getFuture().setFailure(new Exception("Not authenticated yet"));
                 return;
@@ -109,7 +109,7 @@ public class NSQChannelHandler extends SimpleChannelHandler {
 
         } else if (o instanceof NSQCommand) {
             log.debug("NSQCommand writing " + o);
-            if (!authenticated && !(o instanceof Magic)) {
+            if (!isAuthenticated() && !(o instanceof Magic)) {
                 // TODO - should probably queue this stuff up rather than throw exception.
                 e.getFuture().setFailure(new Exception("Not authenticated yet"));
                 return;
@@ -135,18 +135,35 @@ public class NSQChannelHandler extends SimpleChannelHandler {
         future.addListener(new ChannelFutureListener() {
 
             @Override
-            public void operationComplete(ChannelFuture arg0) throws Exception {
-                if (arg0.isSuccess()) {
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (future.isSuccess()) {
                     log.debug("Authenticated");
-                    authenticated = true;
-                } else if (arg0.isCancelled()) {
+                    setAuthenticated(true);
+                    nsqAuthenticated(future);
+                } else if (future.isCancelled()) {
                     log.debug("CANCELLED");
-                } else if (arg0.isDone()) {
+                } else if (future.isDone()) {
                     log.debug("DONE");
                 }
             }
         });
 
     }
+
+    /**
+     * Called when we have reauthenticated to nsqd. Override to add (re)subscribe behaviour
+     */
+    protected void nsqAuthenticated(ChannelFuture future) {
+
+    }
+    
+    public boolean isAuthenticated() {
+        return authenticated;
+    }
+
+    public void setAuthenticated(boolean authenticated) {
+        this.authenticated = authenticated;
+    }
+
 
 }
