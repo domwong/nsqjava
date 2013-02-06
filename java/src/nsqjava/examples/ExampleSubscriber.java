@@ -49,23 +49,19 @@ public class ExampleSubscriber {
         bootstrap.setOption("keepAlive", true);
         InetSocketAddress addr = new InetSocketAddress(host, port);
         bootstrap.setOption("remoteAddress", addr);
+        
         ChannelFuture future = bootstrap.connect(addr);
-        future.sync();
-        Thread.currentThread().sleep(5000);
-        log.debug("Now to do some work");
-        Channel chan = future.getChannel();
-
-        Subscribe sub = new Subscribe("newtopic", "CHANNELFOO", "SUBSCRIBERSHORT", "SUBSCRIBERLONG");
-        log.debug("Subscribing to " + sub.getCommandString());
-        chan.write(sub);
-        Ready rdy = new Ready(100);
-        chan.write(rdy);
-
-        future.awaitUninterruptibly();
-        if (!future.isSuccess()) {
+        ChannelFuture future2 = bootstrap.connect(addr);
+        
+        
+        if (!future.isSuccess() ) {
             future.getCause().printStackTrace();
         }
+        if (!future2.isSuccess() ) {
+            future2.getCause().printStackTrace();
+        }
         future.getChannel().getCloseFuture().awaitUninterruptibly();
+        future2.getChannel().getCloseFuture().awaitUninterruptibly();
         
     }
 
@@ -101,6 +97,16 @@ public class ExampleSubscriber {
             } else {
                 // 
             }
+        }
+        @Override
+        protected void nsqAuthenticated(ChannelFuture future) {
+            Channel chan= future.getChannel();
+            Subscribe sub = new Subscribe("newtopic", "CHANNELFOO", "SUBSCRIBERSHORT", "SUBSCRIBERLONG");
+            log.debug("Subscribing to " + sub.getCommandString());
+            chan.write(sub);
+            Ready rdy = new Ready(100);
+            chan.write(rdy);
+
         }
         
     }

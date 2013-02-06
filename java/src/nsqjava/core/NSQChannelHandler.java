@@ -19,6 +19,9 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.group.ChannelGroup;
+import org.jboss.netty.channel.group.ChannelGroupFuture;
+import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
@@ -30,12 +33,13 @@ public class NSQChannelHandler extends SimpleChannelHandler {
 
     private static final Logger log = LoggerFactory.getLogger(NSQChannelHandler.class);
     private int reconnectDelay = 5;
-    private Timer timer;
+    private static Timer timer;
 
     private boolean authenticated = false;
 
     private ClientBootstrap bootstrap;
-    private boolean closeRequested = false;
+
+    private static final ChannelGroup allChannels = new DefaultChannelGroup("NSQ-channel-group");
 
     public NSQChannelHandler(ClientBootstrap bootstrap) {
         this.bootstrap = bootstrap;
@@ -67,43 +71,39 @@ public class NSQChannelHandler extends SimpleChannelHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
         log.error("Exception caught in NSQ channel", e.getCause());
-        if (!closeRequested) {
-            ctx.getChannel().disconnect();
-        } 
+        ctx.getChannel().close();
     }
-    
 
     @Override
     public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         super.channelDisconnected(ctx, e);
         this.authenticated = false;
         log.debug("Disconnected from NSQ " + getRemoteAddress());
+        log.debug(String.format("Channel state %s %s %s", e.getState(), e.getValue(), e.getClass()));
+
     }
 
     @Override
     public void closeRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         log.debug("Close requested");
-        closeRequested = true;
-        timer.stop();
+        log.debug(String.format("Channel state %s %s %s", e.getState(), e.getValue(), e.getClass()));
         super.closeRequested(ctx, e);
     };
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        if (closeRequested) {
-            log.debug("Close requested, disabling reconnect");
-            timer.stop();
-            return;
-        }
+        log.debug(String.format("Channel state %s %s %s", e.getState(), e.getValue(), e.getClass()));
         log.debug("Sleeping for: " + reconnectDelay + "s");
         timer.newTimeout(new TimerTask() {
             public void run(Timeout timeout) throws Exception {
                 log.debug("Reconnecting to: " + getRemoteAddress());
                 bootstrap.connect();
+
             }
         }, reconnectDelay, TimeUnit.SECONDS);
+
     }
 
     @Override
@@ -147,7 +147,6 @@ public class NSQChannelHandler extends SimpleChannelHandler {
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         log.debug("Channel connected");
-        closeRequested = false;
         ChannelFuture future = e.getChannel().write(new Magic());
         future.addListener(new ChannelFutureListener() {
 
@@ -181,6 +180,23 @@ public class NSQChannelHandler extends SimpleChannelHandler {
 
     public void setAuthenticated(boolean authenticated) {
         this.authenticated = authenticated;
+    }
+
+    @Override
+    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        log.debug("Opening a new channel");
+        allChannels.add(e.getChannel());
+
+    }
+
+    /**
+     * Used to close app gracefully, closes all channels and timer.
+     * 
+     * @return
+     */
+    public static ChannelGroupFuture close() {
+        timer.stop();
+        return allChannels.close();
     }
 
 }

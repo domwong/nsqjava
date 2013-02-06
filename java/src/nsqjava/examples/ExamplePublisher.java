@@ -1,7 +1,6 @@
 package nsqjava.examples;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
 
 import nsqjava.core.NSQChannelHandler;
 import nsqjava.core.NSQFrameDecoder;
@@ -28,15 +27,16 @@ public class ExamplePublisher {
         log.info("Connecting to " + host + ":" + port);
 
         // connect to nsqd TODO add step for lookup via nsqlookupd
-        ChannelFactory factory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+        ChannelFactory factory = new NioClientSocketChannelFactory();//Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
         final ClientBootstrap bootstrap = new ClientBootstrap(factory);
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+            final NSQChannelHandler nsqhndl = new NSQChannelHandler(bootstrap);
+
             public ChannelPipeline getPipeline() {
-                return Channels.pipeline(new NSQFrameDecoder(), new NSQChannelHandler(bootstrap));
+                return Channels.pipeline(new NSQFrameDecoder(), nsqhndl);
             }
         });
-
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
         bootstrap.setOption("remoteAddress", new InetSocketAddress(host, port));
@@ -46,7 +46,7 @@ public class ExamplePublisher {
             future.getCause().printStackTrace();
             return;
         }
-        
+
         Thread.currentThread().sleep(5000);
         log.debug("Now to do some work");
         Channel chan = future.getChannel();
@@ -56,8 +56,10 @@ public class ExamplePublisher {
             log.debug("publishing to" + pub.getCommandString());
             chan.write(pub);
         }
-        chan.close();
-        future.getChannel().getCloseFuture().awaitUninterruptibly();
+
+        log.debug("Close wait1");
+        NSQChannelHandler.close().awaitUninterruptibly();
+        log.debug("Close wait2");
         factory.releaseExternalResources();
     }
 
