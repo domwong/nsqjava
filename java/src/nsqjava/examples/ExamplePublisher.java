@@ -39,21 +39,24 @@ public class ExamplePublisher {
 
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
-        future.sync();
+        bootstrap.setOption("remoteAddress", new InetSocketAddress(host, port));
+        ChannelFuture future = bootstrap.connect();
+        future.awaitUninterruptibly();
+        if (!future.isSuccess()) {
+            future.getCause().printStackTrace();
+            return;
+        }
+        
         Thread.currentThread().sleep(5000);
         log.debug("Now to do some work");
         Channel chan = future.getChannel();
 
-        for (int i = 1; i < 10000; ++i) {
+        for (int i = 1; i < 12000; ++i) {
             Publish pub = new Publish("newtopic", ("BRAVE NEW WOWLD this is going to be bigger than what you expect " + Integer.toString(i)).getBytes());
             log.debug("publishing to" + pub.getCommandString());
             chan.write(pub);
         }
-        future.awaitUninterruptibly();
-        if (!future.isSuccess()) {
-            future.getCause().printStackTrace();
-        }
+        chan.close();
         future.getChannel().getCloseFuture().awaitUninterruptibly();
         factory.releaseExternalResources();
     }

@@ -88,7 +88,9 @@ public class ExampleSubscriber {
                     // once done, confirm with server
                     log.debug("Confirming message\n" + new String(frm.getMsg().getMessageId()));
                     ChannelFuture future = e.getChannel().write(new Finish(frm.getMsg().getMessageId()));
-                    e.getChannel().write(new Ready(100));
+                    future.sync();
+                    log.debug("RDY again");
+                    e.getChannel().write(new Ready(100)).sync();
                 } catch (Exception ex) {
                     log.error("Failed to process message due to exception", ex);
                     // failed to process message, requeue

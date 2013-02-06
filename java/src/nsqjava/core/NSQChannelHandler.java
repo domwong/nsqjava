@@ -35,6 +35,7 @@ public class NSQChannelHandler extends SimpleChannelHandler {
     private boolean authenticated = false;
 
     private ClientBootstrap bootstrap;
+    private boolean closeRequested = false;
 
     public NSQChannelHandler(ClientBootstrap bootstrap) {
         this.bootstrap = bootstrap;
@@ -68,9 +69,11 @@ public class NSQChannelHandler extends SimpleChannelHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         log.error("Exception caught in NSQ channel", e.getCause());
-
-        ctx.getChannel().close();
+        if (!closeRequested) {
+            ctx.getChannel().disconnect();
+        } 
     }
+    
 
     @Override
     public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
@@ -80,7 +83,20 @@ public class NSQChannelHandler extends SimpleChannelHandler {
     }
 
     @Override
+    public void closeRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        log.debug("Close requested");
+        closeRequested = true;
+        timer.stop();
+        super.closeRequested(ctx, e);
+    };
+
+    @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        if (closeRequested) {
+            log.debug("Close requested, disabling reconnect");
+            timer.stop();
+            return;
+        }
         log.debug("Sleeping for: " + reconnectDelay + "s");
         timer.newTimeout(new TimerTask() {
             public void run(Timeout timeout) throws Exception {
@@ -131,6 +147,7 @@ public class NSQChannelHandler extends SimpleChannelHandler {
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         log.debug("Channel connected");
+        closeRequested = false;
         ChannelFuture future = e.getChannel().write(new Magic());
         future.addListener(new ChannelFutureListener() {
 
@@ -151,12 +168,13 @@ public class NSQChannelHandler extends SimpleChannelHandler {
     }
 
     /**
-     * Called when we have reauthenticated to nsqd. Override to add (re)subscribe behaviour
+     * Called when we have reauthenticated to nsqd. Override to add
+     * (re)subscribe behaviour
      */
     protected void nsqAuthenticated(ChannelFuture future) {
 
     }
-    
+
     public boolean isAuthenticated() {
         return authenticated;
     }
@@ -164,6 +182,5 @@ public class NSQChannelHandler extends SimpleChannelHandler {
     public void setAuthenticated(boolean authenticated) {
         this.authenticated = authenticated;
     }
-
 
 }
