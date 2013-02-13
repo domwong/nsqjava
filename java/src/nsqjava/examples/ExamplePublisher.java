@@ -30,8 +30,9 @@ public class ExamplePublisher {
         ChannelFactory factory = new NioClientSocketChannelFactory();//Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
         final ClientBootstrap bootstrap = new ClientBootstrap(factory);
+        final NSQChannelHandler nsqhndl = new NSQChannelHandler(bootstrap);
+
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            final NSQChannelHandler nsqhndl = new NSQChannelHandler(bootstrap);
 
             public ChannelPipeline getPipeline() {
                 return Channels.pipeline(new NSQFrameDecoder(), nsqhndl);
@@ -50,15 +51,18 @@ public class ExamplePublisher {
         Thread.currentThread().sleep(5000);
         log.debug("Now to do some work");
         Channel chan = future.getChannel();
-
-        for (int i = 1; i < 12000; ++i) {
-            Publish pub = new Publish("newtopic", ("BRAVE NEW WOWLD this is going to be bigger than what you expect " + Integer.toString(i)).getBytes());
+        StringBuilder sb = new StringBuilder();
+        for (int i=0; i < 1025; ++i) {
+            sb.append("a");
+        }
+        sb.append("END");
+        for (int i = 1; i < 1000; ++i) {
+            Publish pub = new Publish("newtopic",  (sb.toString()+i).getBytes());
             log.debug("publishing to" + pub.getCommandString());
             chan.write(pub);
         }
-
         log.debug("Close wait1");
-        NSQChannelHandler.close().awaitUninterruptibly();
+        nsqhndl.close().awaitUninterruptibly();
         log.debug("Close wait2");
         factory.releaseExternalResources();
     }

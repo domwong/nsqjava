@@ -33,15 +33,16 @@ public class NSQChannelHandler extends SimpleChannelHandler {
 
     private static final Logger log = LoggerFactory.getLogger(NSQChannelHandler.class);
     private int reconnectDelay = 5;
-    private static Timer timer;
+    private Timer timer;
 
     private boolean authenticated = false;
-
+    private boolean closing = false;
     private ClientBootstrap bootstrap;
 
-    private static final ChannelGroup allChannels = new DefaultChannelGroup("NSQ-channel-group");
+    private final ChannelGroup allChannels = new DefaultChannelGroup("NSQ-channel-group");
 
     public NSQChannelHandler(ClientBootstrap bootstrap) {
+        log.debug("Created a new NSQChannelHandler");
         this.bootstrap = bootstrap;
         timer = new HashedWheelTimer();
     }
@@ -96,14 +97,16 @@ public class NSQChannelHandler extends SimpleChannelHandler {
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         log.debug(String.format("Channel state %s %s %s", e.getState(), e.getValue(), e.getClass()));
         log.debug("Sleeping for: " + reconnectDelay + "s");
-        timer.newTimeout(new TimerTask() {
-            public void run(Timeout timeout) throws Exception {
-                log.debug("Reconnecting to: " + getRemoteAddress());
-                bootstrap.connect();
+        if (!closing) {
+            allChannels.remove(e.getChannel());
+            timer.newTimeout(new TimerTask() {
+                public void run(Timeout timeout) throws Exception {
+                    log.debug("Reconnecting to: " + getRemoteAddress());
+                    bootstrap.connect();
 
-            }
-        }, reconnectDelay, TimeUnit.SECONDS);
-
+                }
+            }, reconnectDelay, TimeUnit.SECONDS);
+        }
     }
 
     @Override
@@ -194,9 +197,14 @@ public class NSQChannelHandler extends SimpleChannelHandler {
      * 
      * @return
      */
-    public static ChannelGroupFuture close() {
+    public ChannelGroupFuture close() {
+        closing = true;
         timer.stop();
         return allChannels.close();
+    }
+
+    public ChannelGroup getAllChannels() {
+        return allChannels;
     }
 
 }

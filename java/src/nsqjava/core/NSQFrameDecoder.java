@@ -20,7 +20,6 @@ public class NSQFrameDecoder extends FrameDecoder {
     
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel chan, ChannelBuffer buff) throws Exception {
-
         int readableBytes = buff.readableBytes();
         if (readableBytes < 4) {
             log.debug("not enough readable bytes");
