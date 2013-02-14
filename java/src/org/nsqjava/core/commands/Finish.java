@@ -1,5 +1,4 @@
-package nsqjava.core.commands;
-
+package org.nsqjava.core.commands;
 
 public class Finish implements NSQCommand {
 

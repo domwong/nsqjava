@@ -1,11 +1,9 @@
-package nsqjava.core.commands;
-
+package org.nsqjava.core.commands;
 
 public class Requeue implements NSQCommand {
 
     private final byte[] msgId;
     private final int timeout;
-    
 
     public Requeue(byte[] msgId, int timeout) {
         this.msgId = msgId;
@@ -14,7 +12,7 @@ public class Requeue implements NSQCommand {
 
     @Override
     public String getCommandString() {
-        return "REQ " + new String(msgId) + " "+ timeout+ "\n";
+        return "REQ " + new String(msgId) + " " + timeout + "\n";
     }
 
     @Override

@@ -1,12 +1,8 @@
-package nsqjava.core;
+package org.nsqjava.core;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
-import nsqjava.core.commands.Finish;
-import nsqjava.core.commands.Magic;
-import nsqjava.core.commands.NSQCommand;
-import nsqjava.core.enums.ResponseType;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -26,13 +22,17 @@ import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
+import org.nsqjava.core.commands.Finish;
+import org.nsqjava.core.commands.Magic;
+import org.nsqjava.core.commands.NSQCommand;
+import org.nsqjava.core.enums.ResponseType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class NSQChannelHandler extends SimpleChannelHandler {
 
     private static final Logger log = LoggerFactory.getLogger(NSQChannelHandler.class);
-    private int reconnectDelay = 5;
+    private int reconnectDelay = 0;
     private Timer timer;
 
     private boolean authenticated = false;
@@ -47,7 +47,7 @@ public class NSQChannelHandler extends SimpleChannelHandler {
         timer = new HashedWheelTimer();
     }
 
-    InetSocketAddress getRemoteAddress() {
+    protected InetSocketAddress getRemoteAddress() {
         return (InetSocketAddress) bootstrap.getOption("remoteAddress");
     }
 
@@ -99,13 +99,22 @@ public class NSQChannelHandler extends SimpleChannelHandler {
         log.debug("Sleeping for: " + reconnectDelay + "s");
         if (!closing) {
             allChannels.remove(e.getChannel());
-            timer.newTimeout(new TimerTask() {
-                public void run(Timeout timeout) throws Exception {
-                    log.debug("Reconnecting to: " + getRemoteAddress());
-                    bootstrap.connect();
 
-                }
-            }, reconnectDelay, TimeUnit.SECONDS);
+            if (reconnectDelay > 0) {
+                timer.newTimeout(new TimerTask() {
+                    public void run(Timeout timeout) throws Exception {
+                        log.debug("Reconnecting to: " + getRemoteAddress());
+                        bootstrap.connect();
+
+                    }
+                }, reconnectDelay, TimeUnit.SECONDS);
+                reconnectDelay = reconnectDelay * 2;
+            } else {
+                log.debug("Reconnecting to: " + getRemoteAddress());
+                reconnectDelay = 1;
+                bootstrap.connect();
+
+            }
         }
     }
 
@@ -150,6 +159,7 @@ public class NSQChannelHandler extends SimpleChannelHandler {
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         log.debug("Channel connected");
+        reconnectDelay = 0;
         ChannelFuture future = e.getChannel().write(new Magic());
         future.addListener(new ChannelFutureListener() {
 

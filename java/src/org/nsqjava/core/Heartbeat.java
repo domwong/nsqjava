@@ -1,4 +1,4 @@
-package nsqjava.core;
+package org.nsqjava.core;
 
 public class Heartbeat {
 

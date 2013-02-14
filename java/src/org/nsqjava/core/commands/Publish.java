@@ -1,14 +1,15 @@
-package nsqjava.core.commands;
+package org.nsqjava.core.commands;
 
 import java.nio.ByteBuffer;
 
-import nsqjava.core.enums.CommandType;
+import org.nsqjava.core.enums.CommandType;
+
 
 public class Publish implements NSQCommand {
     private String topic;
-    private byte[]data;
-    
-    public Publish(String topic, byte[]data) {
+    private byte[] data;
+
+    public Publish(String topic, byte[] data) {
         this.topic = topic;
         this.data = data;
     }
@@ -20,15 +21,14 @@ public class Publish implements NSQCommand {
 
     @Override
     public byte[] getCommandBytes() {
-        String header=String.format("%s %s\n", CommandType.PUBLISH.getCode(), topic);
-        
-        int size = data.length; 
-        ByteBuffer bb = ByteBuffer.allocate(header.length()+4+size);
+        String header = String.format("%s %s\n", CommandType.PUBLISH.getCode(), topic);
+
+        int size = data.length;
+        ByteBuffer bb = ByteBuffer.allocate(header.length() + 4 + size);
         bb.put(header.getBytes());
         bb.putInt(size);
         bb.put(data);
         return bb.array();
     }
-    
-    
+
 }

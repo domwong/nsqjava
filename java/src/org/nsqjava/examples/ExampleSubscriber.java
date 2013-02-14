@@ -1,16 +1,8 @@
-package nsqjava.examples;
+package org.nsqjava.examples;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
-import nsqjava.core.NSQChannelHandler;
-import nsqjava.core.NSQFrame;
-import nsqjava.core.NSQFrameDecoder;
-import nsqjava.core.commands.Finish;
-import nsqjava.core.commands.Ready;
-import nsqjava.core.commands.Requeue;
-import nsqjava.core.commands.Subscribe;
-import nsqjava.core.enums.ResponseType;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -22,6 +14,14 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.nsqjava.core.NSQChannelHandler;
+import org.nsqjava.core.NSQFrame;
+import org.nsqjava.core.NSQFrameDecoder;
+import org.nsqjava.core.commands.Finish;
+import org.nsqjava.core.commands.Ready;
+import org.nsqjava.core.commands.Requeue;
+import org.nsqjava.core.commands.Subscribe;
+import org.nsqjava.core.enums.ResponseType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,25 +44,19 @@ public class ExampleSubscriber {
             }
 
         });
-        
+
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
         InetSocketAddress addr = new InetSocketAddress(host, port);
         bootstrap.setOption("remoteAddress", addr);
-        
+
         ChannelFuture future = bootstrap.connect(addr);
-        ChannelFuture future2 = bootstrap.connect(addr);
-        
-        
-        if (!future.isSuccess() ) {
+
+        if (!future.isSuccess()) {
             future.getCause().printStackTrace();
         }
-        if (!future2.isSuccess() ) {
-            future2.getCause().printStackTrace();
-        }
         future.getChannel().getCloseFuture().awaitUninterruptibly();
-        future2.getChannel().getCloseFuture().awaitUninterruptibly();
-        
+
     }
 
     public static class ExampleHandler extends NSQChannelHandler {
@@ -70,7 +64,7 @@ public class ExampleSubscriber {
         public ExampleHandler(ClientBootstrap bs) {
             super(bs);
         }
-        
+
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
             log.debug("Received message " + e.getMessage());
@@ -98,9 +92,10 @@ public class ExampleSubscriber {
                 // 
             }
         }
+
         @Override
         protected void nsqAuthenticated(ChannelFuture future) {
-            Channel chan= future.getChannel();
+            Channel chan = future.getChannel();
             Subscribe sub = new Subscribe("newtopic", "CHANNELFOO", "SUBSCRIBERSHORT", "SUBSCRIBERLONG");
             log.debug("Subscribing to " + sub.getCommandString());
             chan.write(sub);
@@ -108,7 +103,7 @@ public class ExampleSubscriber {
             chan.write(rdy);
 
         }
-        
+
     }
 
 }

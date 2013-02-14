@@ -1,6 +1,6 @@
-package nsqjava.core.commands;
+package org.nsqjava.core.commands;
 
-import nsqjava.core.enums.CommandType;
+import org.nsqjava.core.enums.CommandType;
 
 public class Ready implements NSQCommand {
 
@@ -19,6 +19,5 @@ public class Ready implements NSQCommand {
     public byte[] getCommandBytes() {
         return getCommandString().getBytes();
     }
-    
-    
+
 }

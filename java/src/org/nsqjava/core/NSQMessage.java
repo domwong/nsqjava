@@ -1,4 +1,4 @@
-package nsqjava.core;
+package org.nsqjava.core;
 
 import java.nio.ByteBuffer;
 
@@ -37,18 +37,17 @@ public class NSQMessage {
     public byte[] getBody() {
         return body;
     }
-    
+
     public byte[] getBytes() {
         int size = getSize();
         ByteBuffer bb = ByteBuffer.allocate(size);
         bb.putLong(timestamp);
-        bb.putChar((char)attempts);
+        bb.putChar((char) attempts);
         bb.put(messageId);
         bb.put(body);
         return bb.array();
     }
-    
-    
+
     public int getSize() {
         return MIN_SIZE_BYTES + body.length;
     }

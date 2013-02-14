@@ -1,6 +1,7 @@
-package nsqjava.core.commands;
+package org.nsqjava.core.commands;
 
 public interface NSQCommand {
     String getCommandString();
+
     byte[] getCommandBytes();
 }

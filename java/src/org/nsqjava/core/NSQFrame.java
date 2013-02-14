@@ -1,8 +1,9 @@
-package nsqjava.core;
+package org.nsqjava.core;
 
 import java.nio.ByteBuffer;
 
-import nsqjava.core.enums.FrameType;
+import org.nsqjava.core.enums.FrameType;
+
 
 public class NSQFrame {
     private final FrameType frameId;
@@ -27,11 +28,11 @@ public class NSQFrame {
         return msg;
     }
 
-    public byte[] getBytes(){
+    public byte[] getBytes() {
         ByteBuffer bb = ByteBuffer.allocate(size);
         bb.putInt(size);
         bb.putInt(frameId.getCode());
         bb.put(msg.getBytes());
-        return bb.array(); 
+        return bb.array();
     }
 }

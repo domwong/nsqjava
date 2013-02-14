@@ -1,4 +1,4 @@
-package nsqjava.core.commands;
+package org.nsqjava.core.commands;
 
 public class Nop implements NSQCommand {
 

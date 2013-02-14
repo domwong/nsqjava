@@ -1,10 +1,7 @@
-package nsqjava.examples;
+package org.nsqjava.examples;
 
 import java.net.InetSocketAddress;
 
-import nsqjava.core.NSQChannelHandler;
-import nsqjava.core.NSQFrameDecoder;
-import nsqjava.core.commands.Publish;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -14,6 +11,9 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.nsqjava.core.NSQChannelHandler;
+import org.nsqjava.core.NSQFrameDecoder;
+import org.nsqjava.core.commands.Publish;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +27,7 @@ public class ExamplePublisher {
         log.info("Connecting to " + host + ":" + port);
 
         // connect to nsqd TODO add step for lookup via nsqlookupd
-        ChannelFactory factory = new NioClientSocketChannelFactory();//Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+        ChannelFactory factory = new NioClientSocketChannelFactory();
 
         final ClientBootstrap bootstrap = new ClientBootstrap(factory);
         final NSQChannelHandler nsqhndl = new NSQChannelHandler(bootstrap);
@@ -42,6 +42,7 @@ public class ExamplePublisher {
         bootstrap.setOption("keepAlive", true);
         bootstrap.setOption("remoteAddress", new InetSocketAddress(host, port));
         ChannelFuture future = bootstrap.connect();
+
         future.awaitUninterruptibly();
         if (!future.isSuccess()) {
             future.getCause().printStackTrace();
@@ -51,13 +52,8 @@ public class ExamplePublisher {
         Thread.currentThread().sleep(5000);
         log.debug("Now to do some work");
         Channel chan = future.getChannel();
-        StringBuilder sb = new StringBuilder();
-        for (int i=0; i < 1025; ++i) {
-            sb.append("a");
-        }
-        sb.append("END");
         for (int i = 1; i < 1000; ++i) {
-            Publish pub = new Publish("newtopic",  (sb.toString()+i).getBytes());
+            Publish pub = new Publish("newtopic", ("Hello World " + i).getBytes());
             log.debug("publishing to" + pub.getCommandString());
             chan.write(pub);
         }

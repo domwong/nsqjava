@@ -1,10 +1,10 @@
-package nsqjava.core.commands;
+package org.nsqjava.core.commands;
 
-public class Close implements NSQCommand {
+public class Magic implements NSQCommand {
 
     @Override
     public String getCommandString() {
-        return "CLS\n";
+        return "  V2";
     }
 
     @Override
