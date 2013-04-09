@@ -2,7 +2,6 @@ package org.nsqjava.examples;
 
 import java.net.InetSocketAddress;
 
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
@@ -17,6 +16,14 @@ import org.nsqjava.core.commands.Publish;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Example publisher. This example uses PUB command of NSQ and the Netty plumbing to publish messages. It is actually
+ * much simpler to do a simple HTTP POST to /put?topic=foobar - just pick your favourite method of doing HTTP POST. If 
+ * you insist on doing it via Netty then this should set you on your way.
+ * 
+ * @author dominic
+ *
+ */
 public class ExamplePublisher {
 
     private static final Logger log = LoggerFactory.getLogger(ExamplePublisher.class);
