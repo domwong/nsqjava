@@ -2,7 +2,6 @@ package org.nsqjava.core;
 
 import java.nio.ByteBuffer;
 
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -27,7 +26,7 @@ public class NSQFrameDecoder extends FrameDecoder {
         }
         buff.markReaderIndex();
         int size = buff.readInt();
-        if (readableBytes < size) {
+        if (readableBytes < size + 4) {
             log.debug("still not enough readable bytes");
             buff.resetReaderIndex();
             return null;
@@ -58,7 +57,7 @@ public class NSQFrameDecoder extends FrameDecoder {
         int attempts = buff.readUnsignedShort();
         byte[] msgId = new byte[16];
         buff.readBytes(msgId);
-        byte[] body = new byte[size - 4 - NSQMessage.MIN_SIZE_BYTES];
+        byte[] body = new byte[size - 4 - NSQMessage.MIN_SIZE_BYTES]; // size - frametype - rest of header
         buff.readBytes(body);
         NSQMessage msg = new NSQMessage(ts, attempts, msgId, body);
         NSQFrame frame = new NSQFrame(FrameType.MESSAGE, size, msg);
@@ -84,7 +83,7 @@ public class NSQFrameDecoder extends FrameDecoder {
     }
 
     private String readString(ChannelBuffer buff, int size) {
-        ByteBuffer bb = ByteBuffer.allocate(size - 4);
+        ByteBuffer bb = ByteBuffer.allocate(size - 4); // size - frametype
         buff.readBytes(bb);
         String resp = new String(bb.array());
         return resp;
